@@ -18,12 +18,15 @@ class Page(HTMLParser):
         self.title = 0
         self.lang = False
         self.viewport = False
+        self.wallpaper_count = 0
         self.stack = []
         self.feed(path.read_text(encoding="utf-8"))
         assert not self.stack, f"Unclosed tags: {path.name}: {self.stack}"
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
+        if tag == "figure" and "wallpaper" in attrs.get("class", "").split():
+            self.wallpaper_count += 1
         if tag not in {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}:
             self.stack.append(tag)
         if "id" in attrs:
@@ -51,6 +54,7 @@ class Page(HTMLParser):
 def check():
     pages = {p.resolve(): Page(p) for p in ROOT.glob("*.html")}
     assert len(pages) == 3, "Expected marketing, privacy and support pages"
+    assert pages[ROOT / "index.html"].wallpaper_count == 9, "Expected nine category previews"
     checked = 0
     external = set()
     for path, page in pages.items():
@@ -75,6 +79,7 @@ def check():
     image_bytes = sum(p.stat().st_size for p in (ROOT / "assets").glob("*"))
     print(f"PASS: {len(pages)} pages; {checked} local references; {len(external)} distinct external/mail links")
     print(f"PASS: headings, landmarks, image alt/dimensions, reduced motion, keyboard focus")
+    print("PASS: nine wallpaper category previews")
     print(f"PASS: no script/iframe/form or external CSS dependencies; image assets {image_bytes:,} bytes")
 
 
